@@ -1,196 +1,154 @@
 'use client';
+import { useState } from 'react';
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-
+// 一旦Amplifyを使わないバージョン
 export default function App() {
-  // const timeSlots = [
-  //   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  //   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-  //   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-  //   "18:00", "18:30", "19:00", "19:30", "20:00"
-  // ];
-
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [room, setRoom] = useState("");
-  const [name, setName] = useState('');
-  const [reservations, setReservations] = useState<{ date: string; room: string; time: string; name: string }[]>([]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('reservations');
-    if (saved) setReservations(JSON.parse(saved));
-  }, []);
-
-  // const timeToMinutes = (t: string) => {
-  //   const [h, m] = t.split(":").map(Number);
-  //   return h * 60 + m;
-  // };
-
-  // const isOverlap = (startA: string, endA: string, startB: string, endB: string) => {
-  //   const sA = timeToMinutes(startA);
-  //   const eA = timeToMinutes(endA);
-  //   const sB = timeToMinutes(startB);
-  //   const eB = timeToMinutes(endB);
-  //   return Math.max(sA, sB) < Math.min(eA, eB);
-  // };
-
-  // const isStartTimeDisabled = (slot: string) => {
-  //   return reservations.some((r) => {
-  //     if (!date || r.date !== format(date, "yyyy-MM-dd") || r.room !== room) return false;
-  //     const [rStart, rEnd] = r.time.split("-");
-  //     const currentIndex = timeSlots.indexOf(slot);
-  //     const slotEnd = timeSlots[currentIndex + 1];
-  //     if (!slotEnd) return true;
-  //     return isOverlap(slot, slotEnd, rStart, rEnd);
-  //   });
-  // };
-
-  // const isEndTimeDisabled = (slot: string) => {
-  //   return reservations.some((r) => {
-  //     if (!date || r.date !== format(date, "yyyy-MM-dd") || r.room !== room || !startTime) return false;
-  //     const [rStart, rEnd] = r.time.split("-");
-  //     return isOverlap(startTime, slot, rStart, rEnd);
-  //   });
-  // };
+  const [name, setName] = useState("");
+  const [reservations, setReservations] = useState<any[]>([]);
 
   const handleReserve = () => {
-    if (!date || !room || !startTime || !endTime || !name) return;
-    const time = `${startTime}-${endTime}`;
-    const newData = [...reservations, {
-      date: format(date, "yyyy-MM-dd"),
+    if (!room || !date || !startTime || !endTime || !name) {
+      alert("すべての項目を入力してください");
+      return;
+    }
+    
+    const newReservation = {
+      id: Date.now().toString(),
+      date,
       room,
-      time,
-      name
-    }];
-    setReservations(newData);
-    localStorage.setItem('reservations', JSON.stringify(newData));
+      time: `${startTime}〜${endTime}`,
+      name,
+    };
+    
+    setReservations(prev => [...prev, newReservation]);
+    
+    // フォームリセット
+    setDate('');
     setRoom('');
     setStartTime('');
     setEndTime('');
     setName('');
-  };
-
-  const handleCancel = (index: number) => {
-    const updated = [...reservations];
-    updated.splice(index, 1);
-    setReservations(updated);
-    localStorage.setItem('reservations', JSON.stringify(updated));
+    
+    alert("予約が作成されました！（※現在はローカル保存のみ）");
   };
 
   return (
-    <main className="min-h-screen bg-gray-100 px-4 py-10 text-gray-800 font-sans">
-      <h1 className="text-2xl font-bold text-center mb-10">会議室予約システム</h1>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>会議室予約システム</h1>
+      <p style={{ color: 'orange' }}>※現在テスト版：データはページリロードで消えます</p>
+      
+      <div style={{ marginBottom: '20px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
+        <h2>新規予約</h2>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>日付:</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '200px' }}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-xl mx-auto">
-        {/* 左カラム */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-          <h2 className="text-lg font-semibold mb-4">新規予約</h2>
-
-          {/* カレンダー */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-              >
-                {date ? format(date, "yyyy-MM-dd") : "日付を選んでください"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          {/* 会議室選択 */}
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>会議室:</label>
           <select
             value={room}
             onChange={(e) => setRoom(e.target.value)}
-            className="mt-4 border rounded-md px-4 py-3 w-full"
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '250px' }}
           >
-            <option value="">会議室を選んでください</option>
+            <option value="">選択してください</option>
             <option value="S/応接室">サヱグサビル 応接室</option>
             <option value="S/会議スペース">サヱグサビル 会議スペース</option>
             <option value="N/応接室">並木ビル 応接室</option>
             <option value="N/会議スペース">並木ビル 会議スペース</option>
           </select>
+        </div>
 
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            placeholder="開始時間"
-            className="mt-4"
-          />
-
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            placeholder="終了時間"
-            className="mt-2"
-          />
-
-          <Input
-            type="text"
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>予約者:</label>
+          <select
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="予約者の名前"
-            className="mt-2"
-          />
-
-          <Button onClick={handleReserve} className="mt-4 w-full">
-            予約する
-          </Button>
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '200px' }}
+          >
+            <option value="">選択してください</option>
+            <option value="井ヶ田">井ヶ田</option>
+            <option value="三村">三村</option>
+          </select>
         </div>
 
-        {/* 右カラム */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-          <h2 className="text-lg font-semibold mb-4">予約一覧</h2>
-
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-4 py-2 text-center">日付</th>
-                <th className="px-4 py-2 text-center">会議室</th>
-                <th className="px-4 py-2 text-center">時間</th>
-                <th className="px-4 py-2 text-center">予約者</th>
-                <th className="px-4 py-2 text-center">削除</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservations.map((r, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-2 text-center">{r.date}</td>
-                  <td className="px-4 py-2 text-center">{r.room}</td>
-                  <td className="px-4 py-2 text-center">{r.time}</td>
-                  <td className="px-4 py-2 text-center">{r.name}</td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      onClick={() => handleCancel(i)}
-                      className="text-red-500 hover:text-red-700 text-lg"
-                      title="削除"
-                    >
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>開始時間:</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>終了時間:</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            />
+          </div>
         </div>
+
+        <button
+          onClick={handleReserve}
+          disabled={!room || !date || !startTime || !endTime || !name}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: !room || !date || !startTime || !endTime || !name ? '#ccc' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: !room || !date || !startTime || !endTime || !name ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          予約を作成
+        </button>
       </div>
-    </main>
+
+      <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
+        <h2>予約一覧 ({reservations.length}件)</h2>
+        {reservations.length === 0 ? (
+          <p style={{ color: '#666', fontStyle: 'italic' }}>予約がありません</p>
+        ) : (
+          <div>
+            {reservations.map((r) => (
+              <div 
+                key={r.id} 
+                style={{ 
+                  marginBottom: '10px', 
+                  padding: '15px', 
+                  border: '1px solid #eee', 
+                  borderRadius: '6px',
+                  backgroundColor: '#f9f9f9'
+                }}
+              >
+                <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+                  {r.room}
+                </div>
+                <div style={{ color: '#666' }}>
+                  📅 {r.date} | ⏰ {r.time} | 👤 {r.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
