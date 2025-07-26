@@ -432,7 +432,7 @@ export default function App() {
                       }`}></div>
                       <div>
                         <p className="font-medium text-gray-900">{r.room || '未設定'}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-medium text-gray-700">
                           {r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('ja-JP', {
                             month: 'short',
                             day: 'numeric',
