@@ -9,7 +9,7 @@ const schema = a.schema({
       name: a.string(),
       subject: a.string(),
     })
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [allow.publicApiKey()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
