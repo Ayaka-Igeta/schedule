@@ -432,13 +432,6 @@ export default function App() {
                       }`}></div>
                       <div>
                         <p className="font-medium text-gray-900">{r.room || '未設定'}</p>
-                        <p className="font-medium text-gray-700">
-                          {r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('ja-JP', {
-                            month: 'short',
-                            day: 'numeric',
-                            weekday: 'short'
-                          }) : '日付未設定'}
-                        </p>
                       </div>
                     </div>
                     <button
@@ -454,6 +447,16 @@ export default function App() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                      <span className="text-gray-500 text-sm">日付</span>
+                      <p className="font-medium text-gray-900">
+                        {r.date ? new Date(r.date + 'T00:00:00').toLocaleDateString('ja-JP', {
+                          month: 'short',
+                          day: 'numeric',
+                          weekday: 'short'
+                        }) : '日付未設定'}
+                      </p>
+                    </div>
+                    <div>
                       <span className="text-gray-500 text-sm">時間</span>
                       <p className="font-medium text-gray-900">{r.time || '時間未設定'}</p>
                     </div>
@@ -461,11 +464,10 @@ export default function App() {
                       <span className="text-gray-500 text-sm">予約者</span>
                       <p className="font-medium text-gray-900">{r.name || '未設定'}</p>
                     </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <span className="text-gray-500 text-sm">件名</span>
-                    <p className="font-medium text-gray-900">{r.subject || '件名未設定'}</p>
+                    <div>
+                      <span className="text-gray-500 text-sm">件名</span>
+                      <p className="font-medium text-gray-900">{r.subject || '件名未設定'}</p>
+                    </div>
                   </div>
 
                   <div className="mt-4">
