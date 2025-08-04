@@ -3,14 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
-// AWS Amplify関連は一旦コメントアウト（バックエンドデプロイ待ち）
-// import { Amplify } from 'aws-amplify';
-// import config from '../amplify_outputs.json';
-// import { generateClient } from 'aws-amplify/data';
-// import type { Schema } from '../amplify/data/resource';
+import { Amplify } from 'aws-amplify';
+import config from '../amplify_outputs.json';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../amplify/data/resource';
 
-// Amplify.configure(config);
-// const client = generateClient<Schema>();
+console.log("Amplify設定:", config);
+Amplify.configure(config);
+const client = generateClient<Schema>();
+console.log("GraphQLクライアント作成完了");
 
 interface Reservation {
   id: string;
@@ -58,20 +59,67 @@ export default function App() {
     return a.time.localeCompare(b.time);
   });
 
-  // 一旦ローカルストレージを使用
+  // Amplifyからデータを読み込み
   useEffect(() => {
-    const saved = localStorage.getItem('reservations');
-    if (saved) {
-      try {
-        setReservations(JSON.parse(saved));
-      } catch (error) {
-        console.error("データの読み込みエラー:", error);
-        showNotification("データの読み込みに失敗しました", "error");
+    fetchReservations();
+    
+    // リアルタイム同期の設定
+    console.log("リアルタイム同期を開始します");
+    const sub = client.models.Reservation.observeQuery().subscribe({
+      next: (data) => {
+        console.log("リアルタイム同期データ受信:", data);
+        setReservations(data.items.map(item => ({
+          id: item.id,
+          date: item.date,
+          room: item.room,
+          time: item.time,
+          name: item.name,
+          subject: item.subject,
+        })));
+      },
+      error: (error) => {
+        console.error("リアルタイム同期エラー:", error);
       }
-    }
+    });
+
+    // クリーンアップ
+    return () => {
+      console.log("リアルタイム同期を停止します");
+      sub.unsubscribe();
+    };
   }, []);
 
+  const fetchReservations = async () => {
+    console.log("クラウドデータベースからデータを読み込んでいます...");
+    try {
+      const result = await client.models.Reservation.list();
+      console.log("データ読み込み結果:", result);
+      
+      if (result.data) {
+        const mappedData = result.data.map(item => ({
+          id: item.id,
+          date: item.date,
+          room: item.room,
+          time: item.time,
+          name: item.name,
+          subject: item.subject,
+        }));
+        console.log("マップ済みデータ:", mappedData);
+        setReservations(mappedData);
+      } else if (result.errors) {
+        console.error("データ読み込みエラー:", result.errors);
+        showNotification(`データ読み込みエラー: ${result.errors[0]?.message}`, "error");
+      }
+    } catch (error) {
+      console.error("データの読み込みエラー:", error);
+      showNotification("データの読み込みに失敗しました", "error");
+    }
+  };
+
   const handleReserve = async () => {
+    console.log("予約作成を開始します（クラウドDB）");
+    console.log("入力値:", { room, date, startTime, endTime, name, subject });
+    
     if (!room || !date || !startTime || !endTime || !name || !subject) {
       showNotification("すべての項目を入力してください", "error");
       return;
@@ -86,29 +134,34 @@ export default function App() {
     setIsLoading(true);
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
+      console.log("フォーマット済みデータ:", { formattedDate, room, time: `${startTime}〜${endTime}`, name, subject });
       
-      const newReservation: Reservation = {
-        id: Date.now().toString(),
+      const result = await client.models.Reservation.create({
         date: formattedDate,
         room,
         time: `${startTime}〜${endTime}`,
         name,
         subject,
-      };
+      });
       
-      const updatedReservations = [...reservations, newReservation];
-      setReservations(updatedReservations);
-      localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      console.log("作成結果:", result);
       
-      // フォームリセット
-      setDate(undefined);
-      setRoom('');
-      setStartTime('');
-      setEndTime('');
-      setName('');
-      setSubject('');
-      
-      showNotification("予約が作成されました！", "success");
+      if (result.data) {
+        console.log("予約作成成功 - リアルタイム同期により自動更新されます");
+        
+        // フォームリセット
+        setDate(undefined);
+        setRoom('');
+        setStartTime('');
+        setEndTime('');
+        setName('');
+        setSubject('');
+        
+        showNotification("予約が作成されました！", "success");
+      } else if (result.errors) {
+        console.error("GraphQLエラー:", result.errors);
+        showNotification(`予約作成エラー: ${result.errors[0]?.message || 'Unknown error'}`, "error");
+      }
     } catch (error) {
       console.error("予約作成エラー:", error);
       showNotification("予約の作成に失敗しました", "error");
@@ -126,9 +179,7 @@ export default function App() {
     }
     
     try {
-      const updatedReservations = reservations.filter(r => r.id !== id);
-      setReservations(updatedReservations);
-      localStorage.setItem('reservations', JSON.stringify(updatedReservations));
+      await client.models.Reservation.delete({ id });
       showNotification("予約をキャンセルしました", "success");
     } catch (error) {
       console.error("削除エラー:", error);
